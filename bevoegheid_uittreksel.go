@@ -3,6 +3,7 @@ package bevoegdheden
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"github.com/kvk-innovatie/kvk-bevoegdheden/models"
@@ -31,11 +32,19 @@ func isSamePerson(p1 models.IdentityNP, p2 models.IdentityNP) bool {
 		return false
 	}
 
-	return (p1.Geslachtsnaam == p2.Geslachtsnaam && p1.Voornamen == p2.Voornamen && p1.Geboortedatum == p2.Geboortedatum && p1.VoorvoegselGeslachtsnaam == p2.VoorvoegselGeslachtsnaam)
+	re := regexp.MustCompile(`\s*-\s*`)
+	g1 := re.ReplaceAllString(p1.Geslachtsnaam, "-")
+	g2 := re.ReplaceAllString(p2.Geslachtsnaam, "-")
+
+	// surname from IRMA personal data card has prefix included. To compare add prefix to geslachtsnaam from KVK
+	if p2.VoorvoegselGeslachtsnaam != "" {
+		g2 = p2.VoorvoegselGeslachtsnaam + " " + g2
+	}
+
+	return (g1 == g2 && p1.Voornamen == p2.Voornamen && p1.Geboortedatum == p2.Geboortedatum)
 }
 
 func getFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde, functionarisType string) models.Functionaris {
-	np := functionarisOfGemachtigde.Door.NatuurlijkPersoon
 	bgd := functionarisOfGemachtigde.Bevoegdheid
 	bvm := functionarisOfGemachtigde.Volmacht.BeperkteVolmacht
 	beperkingInEuros := ""
@@ -58,15 +67,6 @@ func getFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde
 		}
 	}
 
-	bijzondereRechtstoestand := ""
-	if np.BijzondereRechtstoestand.Soort.Code != "" {
-		bijzondereRechtstoestand = np.BijzondereRechtstoestand.Soort.Omschrijving + ":" + np.BijzondereRechtstoestand.Soort.Code
-	}
-	beperkingInRechtshandeling := ""
-	if np.BeperkingInRechtshandeling.Soort.Code != "" {
-		beperkingInRechtshandeling = np.BeperkingInRechtshandeling.Soort.Omschrijving + ":" + np.BeperkingInRechtshandeling.Soort.Code
-	}
-
 	return models.Functionaris{
 		TypeFunctionaris: functionarisType,
 		Functie:          functionarisOfGemachtigde.Functie.Omschrijving,
@@ -87,6 +87,22 @@ func getFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde
 		OmschrijvingOverigeVolmacht:  bvm.OmschrijvingOverigeVolmacht,
 		MagOpgaveHandelsregisterDoen: bvm.MagOpgaveHandelsregisterDoen.Omschrijving,
 
+		Importance: importanceTypeFunctionaris[functionarisType],
+	}
+}
+
+func getNatuurlijkePersoonFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde, functionarisType string) models.NatuurlijkPersoonFunctionaris {
+	np := functionarisOfGemachtigde.Door.NatuurlijkPersoon
+	bijzondereRechtstoestand := ""
+	if np.BijzondereRechtstoestand.Soort.Code != "" {
+		bijzondereRechtstoestand = np.BijzondereRechtstoestand.Soort.Omschrijving + ":" + np.BijzondereRechtstoestand.Soort.Code
+	}
+	beperkingInRechtshandeling := ""
+	if np.BeperkingInRechtshandeling.Soort.Code != "" {
+		beperkingInRechtshandeling = np.BeperkingInRechtshandeling.Soort.Omschrijving + ":" + np.BeperkingInRechtshandeling.Soort.Code
+	}
+	functionaris := getFunctionaris(functionarisOfGemachtigde, functionarisType)
+	npFunctionaris := models.NatuurlijkPersoonFunctionaris{
 		Geslachtsnaam:              np.Geslachtsnaam,
 		VoorvoegselGeslachtsnaam:   np.VoorvoegselGeslachtsnaam,
 		Voornamen:                  np.Voornamen,
@@ -95,44 +111,27 @@ func getFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde
 		VolledigeNaam:              np.VolledigeNaam,
 		BijzondereRechtstoestand:   bijzondereRechtstoestand,
 		BeperkingInRechtshandeling: beperkingInRechtshandeling,
-
-		Importance: importanceTypeFunctionaris[functionarisType],
+		Functionaris:               functionaris,
 	}
+
+	return npFunctionaris
 }
 
 func getRechtspersoonFunctionaris(functionarisOfGemachtigde *models.FunctionarisOfGemachtigde, functionarisType string) models.RechtspersoonFunctionaris {
 	rp := functionarisOfGemachtigde.Door.Rechtspersoon
-
-	return models.RechtspersoonFunctionaris{
+	functionaris := getFunctionaris(functionarisOfGemachtigde, functionarisType)
+	rpFunctionaris := models.RechtspersoonFunctionaris{
 		KvkNummer:         rp.IsEigenaarVan.MaatschappelijkeActiviteit.KvkNummer,
 		PersoonRechtsvorm: rp.PersoonRechtsvorm,
 		Naam:              rp.VolledigeNaam,
-		TypeFunctionaris:  functionarisType,
-		Functie:           functionarisOfGemachtigde.Functie.Omschrijving,
+		Functionaris:      functionaris,
 	}
+
+	return rpFunctionaris
 }
 
-func getFunctionarisPaths(basePath string) models.Functionaris {
-	return models.Functionaris{
-		TypeFunctionaris: basePath,
-		Functie:          basePath + ".functie.omschrijving",
-		Functietitel:     basePath + ".functietitel.titel",
-		SchorsingAanvang: basePath + ".schorsing.registratie.datumAanvang",
-		SchorsingEinde:   basePath + ".schorsing.registratie.datumEinde",
-		Handlichting:     basePath + ".handlichting.isVerleend.code",
-
-		SoortBevoegdheid:            basePath + ".bevoegdheid.soort.omschrijving",
-		BeperkingInEurosBevoegdheid: basePath + ".bevoegdheid.beperkingInEuros",
-		OverigeBeperkingBevoegdheid: basePath + ".bevoegdheid.overigeBeperking.omschrijving",
-		IsBevoegdMetAnderePersonen:  basePath + ".bevoegdheid.isBevoegdMetAnderePersonen.omschrijving",
-
-		TypeVolmacht:                 basePath + ".volmacht.typeVolmacht.omschrijving",
-		BeperkingInGeldVolmacht:      basePath + ".volmacht.beperkteVolmacht.beperkingInGeld",
-		BeperkingInHandelingVolmacht: basePath + ".volmacht.beperkteVolmacht.beperkingInHandeling",
-		HeeftOverigeVolmacht:         basePath + ".volmacht.beperkteVolmacht.heeftOverigeVolmacht.omschrijving",
-		OmschrijvingOverigeVolmacht:  basePath + ".volmacht.beperkteVolmacht.omschrijvingOverigeVolmacht",
-		MagOpgaveHandelsregisterDoen: basePath + ".volmacht.beperkteVolmacht.magOpgaveHandelsregisterDoen.omschrijving",
-
+func getFunctionarisPaths(basePath string) models.NatuurlijkPersoonFunctionaris {
+	return models.NatuurlijkPersoonFunctionaris{
 		Geslachtsnaam:              basePath + ".door.natuurlijkPersoon.geslachtsnaam",
 		VoorvoegselGeslachtsnaam:   basePath + ".door.natuurlijkPersoon.voorvoegselGeslachtsnaam",
 		Voornamen:                  basePath + ".door.natuurlijkPersoon.voornamen",
@@ -141,11 +140,86 @@ func getFunctionarisPaths(basePath string) models.Functionaris {
 		VolledigeNaam:              basePath + ".door.natuurlijkPersoon.volledigeNaam",
 		BijzondereRechtstoestand:   basePath + ".door.natuurlijkPersoon.bijzondereRechtstoestand.soort",
 		BeperkingInRechtshandeling: basePath + ".door.natuurlijkPersoon.beperkingInRechtshandeling.soort",
+
+		Functionaris: models.Functionaris{
+			TypeFunctionaris: basePath,
+			Functie:          basePath + ".functie.omschrijving",
+			Functietitel:     basePath + ".functietitel.titel",
+			SchorsingAanvang: basePath + ".schorsing.registratie.datumAanvang",
+			SchorsingEinde:   basePath + ".schorsing.registratie.datumEinde",
+			Handlichting:     basePath + ".handlichting.isVerleend.code",
+
+			SoortBevoegdheid:            basePath + ".bevoegdheid.soort.omschrijving",
+			BeperkingInEurosBevoegdheid: basePath + ".bevoegdheid.beperkingInEuros",
+			OverigeBeperkingBevoegdheid: basePath + ".bevoegdheid.overigeBeperking.omschrijving",
+			IsBevoegdMetAnderePersonen:  basePath + ".bevoegdheid.isBevoegdMetAnderePersonen.omschrijving",
+
+			TypeVolmacht:                 basePath + ".volmacht.typeVolmacht.omschrijving",
+			BeperkingInGeldVolmacht:      basePath + ".volmacht.beperkteVolmacht.beperkingInGeld",
+			BeperkingInHandelingVolmacht: basePath + ".volmacht.beperkteVolmacht.beperkingInHandeling",
+			HeeftOverigeVolmacht:         basePath + ".volmacht.beperkteVolmacht.heeftOverigeVolmacht.omschrijving",
+			OmschrijvingOverigeVolmacht:  basePath + ".volmacht.beperkteVolmacht.omschrijvingOverigeVolmacht",
+			MagOpgaveHandelsregisterDoen: basePath + ".volmacht.beperkteVolmacht.magOpgaveHandelsregisterDoen.omschrijving",
+		},
 	}
 }
 
-func addInterpretatie(bevoegdheidUittreksel *models.BevoegdheidUittreksel, functionaris *models.Functionaris) {
+func addInterpretatieNP(bevoegdheidUittreksel *models.BevoegdheidUittreksel, functionaris *models.NatuurlijkPersoonFunctionaris) {
 	namePerson := fmt.Sprintf("%s %s %s", functionaris.Voornamen, functionaris.VoorvoegselGeslachtsnaam, functionaris.Geslachtsnaam)
+	interpretatie := &functionaris.Interpretatie
+	interpretatie.HeeftBeperking = "Nee"
+
+	addInterpretatie(bevoegdheidUittreksel, &functionaris.Functionaris, namePerson)
+
+	if functionaris.Overlijdensdatum != "" {
+		interpretatie.HeeftBeperking = "Ja"
+		interpretatie.IsBevoegd = "Nee"
+		interpretatie.Reden = fmt.Sprintf("De persoon %s staat geregistreerd als overleden op %s", namePerson, functionaris.Overlijdensdatum)
+		return
+	}
+
+	if functionaris.BijzondereRechtstoestand != "" {
+		interpretatie.HeeftBeperking = "Ja"
+		interpretatie.IsBevoegd = "Nee"
+		interpretatie.Reden = fmt.Sprintf("De persoon %s heeft een bijzondere rechtstoestand: %s", namePerson, functionaris.BijzondereRechtstoestand)
+		return
+	}
+
+	if functionaris.BeperkingInRechtshandeling != "" {
+		interpretatie.HeeftBeperking = "Ja"
+		interpretatie.IsBevoegd = "Nee"
+		interpretatie.Reden = fmt.Sprintf("De persoon %s heeft een beperking in rechtshandeling: %s", namePerson, functionaris.BeperkingInRechtshandeling)
+		return
+	}
+
+	if isMinderjarig(functionaris.Geboortedatum) {
+		interpretatie.HeeftBeperking = "Ja"
+		interpretatie.IsBevoegd = "Nee"
+
+		if bevoegdheidUittreksel.PersoonRechtsvorm == "Eenmanszaak" && functionaris.TypeFunctionaris == "Eigenaar" {
+			if functionaris.Handlichting == "" {
+				interpretatie.Reden = fmt.Sprintf("De persoon %s is een minderjarige eigenaar eenmanszaak zonder handlichting bij inschrijving %s alleen bevoegd met schriftelijke toestemming van een wettelijke vertegenwoordiger.", namePerson, bevoegdheidUittreksel.KvkNummer)
+			} else {
+				interpretatie.Reden = fmt.Sprintf("De persoon %s is een minderjarige eigenaar eenmanszaak met handlichting bij inschrijving %s. Raadpleeg het Handelsregister voor meer informatie.", namePerson, bevoegdheidUittreksel.KvkNummer)
+			}
+		} else {
+			if functionaris.Handlichting == "" {
+				interpretatie.Reden = fmt.Sprintf("De persoon %s is minderjarig zonder handlichting bij inschrijving %s alleen bevoegd met schriftelijke toestemming van een wettelijke vertegenwoordiger.", namePerson, bevoegdheidUittreksel.KvkNummer)
+			} else {
+				interpretatie.Reden = fmt.Sprintf("De persoon %s is minderjarig met handlichting bij inschrijving %s. Raadpleeg het Handelsregister voor meer informatie.", namePerson, bevoegdheidUittreksel.KvkNummer)
+			}
+		}
+		return
+	}
+
+	if bevoegdheidUittreksel.PersoonRechtsvorm == "Eenmanszaak" && functionaris.TypeFunctionaris == "Eigenaar" {
+		interpretatie.IsBevoegd = "Ja"
+		interpretatie.Reden = fmt.Sprintf("De persoon %s is eigenaar van een eenmanszaak", namePerson)
+		return
+	}
+}
+
+func addInterpretatie(bevoegdheidUittreksel *models.BevoegdheidUittreksel, functionaris *models.Functionaris, namePerson string) {
 	interpretatie := &functionaris.Interpretatie
 	interpretatie.HeeftBeperking = "Nee"
 
@@ -184,57 +258,10 @@ func addInterpretatie(bevoegdheidUittreksel *models.BevoegdheidUittreksel, funct
 		return
 	}
 
-	if functionaris.Overlijdensdatum != "" {
-		interpretatie.HeeftBeperking = "Ja"
-		interpretatie.IsBevoegd = "Nee"
-		interpretatie.Reden = fmt.Sprintf("De persoon %s staat geregistreerd als overleden op %s", namePerson, functionaris.Overlijdensdatum)
-		return
-	}
-
-	if functionaris.BijzondereRechtstoestand != "" {
-		interpretatie.HeeftBeperking = "Ja"
-		interpretatie.IsBevoegd = "Nee"
-		interpretatie.Reden = fmt.Sprintf("De persoon %s heeft een bijzondere rechtstoestand: %s", namePerson, functionaris.BijzondereRechtstoestand)
-		return
-	}
-
-	if functionaris.BeperkingInRechtshandeling != "" {
-		interpretatie.HeeftBeperking = "Ja"
-		interpretatie.IsBevoegd = "Nee"
-		interpretatie.Reden = fmt.Sprintf("De persoon %s heeft een beperking in rechtshandeling: %s", namePerson, functionaris.BeperkingInRechtshandeling)
-		return
-	}
-
 	if functionaris.SchorsingAanvang != "" && functionaris.SchorsingEinde == "" {
 		interpretatie.HeeftBeperking = "Ja"
 		interpretatie.IsBevoegd = "Nee"
-		interpretatie.Reden = fmt.Sprintf("De persoon %s is geschorst sinds: %s", namePerson, functionaris.SchorsingAanvang)
-		return
-	}
-
-	if isMinderjarig(functionaris.Geboortedatum) {
-		interpretatie.HeeftBeperking = "Ja"
-		interpretatie.IsBevoegd = "Nee"
-
-		if bevoegdheidUittreksel.PersoonRechtsvorm == "Eenmanszaak" && functionaris.TypeFunctionaris == "Eigenaar" {
-			if functionaris.Handlichting == "" {
-				interpretatie.Reden = fmt.Sprintf("De persoon %s is een minderjarige eigenaar eenmanszaak zonder handlichting bij inschrijving %s alleen bevoegd met schriftelijke toestemming van een wettelijke vertegenwoordiger.", namePerson, bevoegdheidUittreksel.KvkNummer)
-			} else {
-				interpretatie.Reden = fmt.Sprintf("De persoon %s is een minderjarige eigenaar eenmanszaak met handlichting bij inschrijving %s. Raadpleeg het Handelsregister voor meer informatie.", namePerson, bevoegdheidUittreksel.KvkNummer)
-			}
-		} else {
-			if functionaris.Handlichting == "" {
-				interpretatie.Reden = fmt.Sprintf("De persoon %s is minderjarig zonder handlichting bij inschrijving %s alleen bevoegd met schriftelijke toestemming van een wettelijke vertegenwoordiger.", namePerson, bevoegdheidUittreksel.KvkNummer)
-			} else {
-				interpretatie.Reden = fmt.Sprintf("De persoon %s is minderjarig met handlichting bij inschrijving %s. Raadpleeg het Handelsregister voor meer informatie.", namePerson, bevoegdheidUittreksel.KvkNummer)
-			}
-		}
-		return
-	}
-
-	if bevoegdheidUittreksel.PersoonRechtsvorm == "Eenmanszaak" && functionaris.TypeFunctionaris == "Eigenaar" {
-		interpretatie.IsBevoegd = "Ja"
-		interpretatie.Reden = fmt.Sprintf("De persoon %s is eigenaar van een eenmanszaak", namePerson)
+		interpretatie.Reden = fmt.Sprintf("%s is geschorst sinds: %s", namePerson, functionaris.SchorsingAanvang)
 		return
 	}
 
@@ -313,20 +340,15 @@ func loopFunctionarissen(bevoegdheidUittreksel *models.BevoegdheidUittreksel, pa
 			if rp == nil {
 				continue
 			}
-			rechtsPersoonFunctionaris := models.RechtspersoonFunctionaris{
-				KvkNummer:         rp.IsEigenaarVan.MaatschappelijkeActiviteit.KvkNummer,
-				PersoonRechtsvorm: rp.PersoonRechtsvorm,
-				Naam:              rp.VolledigeNaam,
-				TypeFunctionaris:  functionarisType,
-				Functie:           functionarisOfGemachtigde.Functie.Omschrijving,
-			}
+			rechtsPersoonFunctionaris := getRechtspersoonFunctionaris(functionarisOfGemachtigde, functionarisType)
+			addInterpretatie(bevoegdheidUittreksel, &rechtsPersoonFunctionaris.Functionaris, rechtsPersoonFunctionaris.Naam)
 			bevoegdheidUittreksel.AlleRechtspersoonFunctionarissen = append(bevoegdheidUittreksel.AlleRechtspersoonFunctionarissen, rechtsPersoonFunctionaris)
 			continue
 		}
 
-		functionaris := getFunctionaris(functionarisOfGemachtigde, functionarisType)
-		addInterpretatie(bevoegdheidUittreksel, &functionaris)
-		bevoegdheidUittreksel.AlleFunctionarissen = append(bevoegdheidUittreksel.AlleFunctionarissen, functionaris)
+		npFunctionaris := getNatuurlijkePersoonFunctionaris(functionarisOfGemachtigde, functionarisType)
+		addInterpretatieNP(bevoegdheidUittreksel, &npFunctionaris)
+		bevoegdheidUittreksel.AlleFunctionarissen = append(bevoegdheidUittreksel.AlleFunctionarissen, npFunctionaris)
 
 		identityFunctionaris := models.IdentityNP{
 			Geslachtsnaam:            np.Geslachtsnaam,
@@ -335,8 +357,8 @@ func loopFunctionarissen(bevoegdheidUittreksel *models.BevoegdheidUittreksel, pa
 			Geboortedatum:            convertDate(np.Geboortedatum),
 		}
 		if isSamePerson(identityNP, identityFunctionaris) {
-			if bevoegdheidUittreksel.MatchedFunctionaris == nil || bevoegdheidUittreksel.MatchedFunctionaris.Importance < functionaris.Importance {
-				bevoegdheidUittreksel.MatchedFunctionaris = &functionaris
+			if bevoegdheidUittreksel.MatchedFunctionaris == nil || bevoegdheidUittreksel.MatchedFunctionaris.Importance < npFunctionaris.Importance {
+				bevoegdheidUittreksel.MatchedFunctionaris = &npFunctionaris
 				paths.MatchedFunctionaris = getFunctionarisPaths(path)
 			}
 		}
@@ -362,17 +384,19 @@ func eigenaarIsNatuurlijkPersoon(bevoegdheidUittreksel *models.BevoegdheidUittre
 	paths.BeperkingInRechtshandeling = basePath + ".beperkingInRechtshandeling.soort"
 	// bevoegdheidUittreksel.Paths.Handlichting = basePath + ".handlichting.isVerleend.code"
 
-	functionaris := models.Functionaris{
+	functionaris := models.NatuurlijkPersoonFunctionaris{
 		Geslachtsnaam:            eenmanszaak.Geslachtsnaam,
 		VoorvoegselGeslachtsnaam: eenmanszaak.VoorvoegselGeslachtsnaam,
 		Voornamen:                eenmanszaak.Voornamen,
 		Geboortedatum:            convertDate(eenmanszaak.Geboortedatum),
 		Overlijdensdatum:         convertDate(eenmanszaak.Overlijdensdatum),
 		VolledigeNaam:            eenmanszaak.VolledigeNaam,
-		TypeFunctionaris:         "Eigenaar",
-		Importance:               5,
+		Functionaris: models.Functionaris{
+			TypeFunctionaris: "Eigenaar",
+			Importance:       5,
+		},
 	}
-	addInterpretatie(bevoegdheidUittreksel, &functionaris)
+	addInterpretatieNP(bevoegdheidUittreksel, &functionaris)
 
 	bevoegdheidUittreksel.AlleFunctionarissen = append(bevoegdheidUittreksel.AlleFunctionarissen, functionaris)
 
@@ -386,14 +410,16 @@ func eigenaarIsNatuurlijkPersoon(bevoegdheidUittreksel *models.BevoegdheidUittre
 	if isSamePerson(identityNP, identityFunctionaris) {
 		bevoegdheidUittreksel.MatchedFunctionaris = &functionaris
 
-		paths.MatchedFunctionaris = models.Functionaris{
+		paths.MatchedFunctionaris = models.NatuurlijkPersoonFunctionaris{
 			Geslachtsnaam:            basePath + ".geslachtsnaam",
 			Voornamen:                basePath + ".voornamen",
 			VoorvoegselGeslachtsnaam: basePath + ".voorvoegselGeslachtsnaam",
 			Geboortedatum:            basePath + ".geboortedatum",
 			Overlijdensdatum:         basePath + ".overlijdensdatum",
 			VolledigeNaam:            basePath + ".volledigeNaam",
-			Handlichting:             basePath + ".handlichting.isVerleend.code",
+			Functionaris: models.Functionaris{
+				Handlichting: basePath + ".handlichting.isVerleend.code",
+			},
 		}
 	}
 	loopFunctionarissen(bevoegdheidUittreksel, paths, identityNP, eenmanszaak.Heeft, basePath)

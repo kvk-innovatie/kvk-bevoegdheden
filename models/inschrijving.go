@@ -1,351 +1,613 @@
 package models
 
-import "encoding/xml"
+import (
+	"encoding/json"
+)
 
-type OphalenInschrijvingRequest struct {
-	XMLName   xml.Name `xml:"ophalenInschrijvingRequest" json:"ophalenInschrijvingRequest"`
-	KvkNummer string   `xml:"kvkNummer" json:"kvkNummer"`
+type HrResponse struct {
+	Envelope struct {
+		Body struct {
+			OphalenInschrijvingResponse OphalenInschrijvingResponse `json:"ophalenInschrijvingResponse"`
+		} `json:"wstxns8:Body"`
+	} `json:"soap:Envelope"`
 }
 
 type OphalenInschrijvingResponse struct {
-	Peilmoment string     `xml:"peilmoment,attr"`
-	Meldingen  *Meldingen `xml:"meldingen" json:"meldingen"`
+	Peilmoment string     `json:"@peilmoment"`
+	Meldingen  *Meldingen `json:"meldingen"`
 	Product    struct {
-		MaatschappelijkeActiviteit *MaatschappelijkeActiviteit `xml:"maatschappelijkeActiviteit" json:"maatschappelijkeActiviteit"`
-	} `xml:"product"`
-	InschrijvingXML string `json:"inschrijvingXML"`
+		MaatschappelijkeActiviteit *MaatschappelijkeActiviteit `json:"maatschappelijkeActiviteit"`
+	} `json:"product"`
 }
 
 type Meldingen struct {
-	Informatie *Enumeratie `xml:"informatie" json:"informatie"`
-	Fout       *Enumeratie `xml:"fout" json:"fout"`
+	Informatie *Enumeratie `json:"informatie"`
+	Fout       *Enumeratie `json:"fout"`
 }
 
 type MaatschappelijkeActiviteit struct {
-	KvkNummer     string      `xml:"kvkNummer" json:"kvkNummer"`
-	Naam          string      `xml:"naam" json:"naam"`
-	Registratie   Registratie `xml:"registratie" json:"registratie"`
+	KvkNummer     string      `json:"kvkNummer"`
+	Naam          string      `json:"naam"`
+	Registratie   Registratie `json:"registratie"`
 	BezoekLocatie struct {
-		VolledigAdres string `xml:"volledigAdres" json:"volledigAdres"`
-	} `xml:"bezoekLocatie" json:"bezoekLocatie"`
-	Communicatiegegevens struct {
-		EmailAdres         []string `xml:"emailAdres" json:"emailAdres"`
-		Communicatienummer []struct {
-			Toegangscode string     `xml:"toegangscode" json:"toegangscode"`
-			Nummer       string     `xml:"nummer" json:"nummer"`
-			Soort        Enumeratie `xml:"soort" json:"soort"`
-		} `xml:"communicatienummer" json:"communicatienummer"`
-	} `xml:"communicatiegegevens" json:"communicatiegegevens"`
-	SbiActiviteit []struct {
-		SbiCode           Enumeratie `xml:"sbiCode" json:"sbiCode"`
-		IsHoofdactiviteit Enumeratie `xml:"isHoofdactiviteit" json:"isHoofdactiviteit"`
-	} `xml:"sbiActiviteit" json:"sbiActiviteit"`
-	ManifesteertZichAls struct {
-		Onderneming struct {
-			SbiActiviteit []struct {
-				SbiCode           Enumeratie `xml:"sbiCode" json:"sbiCode"`
-				IsHoofdactiviteit Enumeratie `xml:"isHoofdactiviteit" json:"isHoofdactiviteit"`
-			} `xml:"sbiActiviteit" json:"sbiActiviteit"`
-			HandeltOnder []struct {
-				Handelsnaam struct {
-					Naam string `xml:"naam" json:"naam"`
-				} `xml:"handelsnaam" json:"handelsnaam"`
-			} `xml:"handeltOnder" json:"handeltOnder"`
-		} `xml:"onderneming" json:"onderneming"`
-	} `xml:"manifesteertZichAls" json:"manifesteertZichAls"`
+		VolledigAdres string `json:"volledigAdres"`
+	} `json:"bezoekLocatie"`
+	Communicatiegegevens Communicatiegegevens `json:"communicatiegegevens"`
+	SbiActiviteit        []SbiActiviteit      `json:"sbiActiviteit"`
+	ManifesteertZichAls  struct {
+		Onderneming Onderneming `json:"onderneming"`
+	} `json:"manifesteertZichAls"`
 	HeeftAlsEigenaar struct {
-		NaamPersoon                     *NietNatuurlijkPersoon `xml:"naamPersoon,omitempty" json:"naamPersoon,omitempty"`
-		Eenmanszaak                     *Eenmanszaak           `xml:"natuurlijkPersoon,omitempty" json:"natuurlijkPersoon,omitempty"`
-		BuitenlandseVennootschap        *NietNatuurlijkPersoon `xml:"buitenlandseVennootschap,omitempty" json:"buitenlandseVennootschap,omitempty"`
-		EenmanszaakMetMeerdereEigenaren *NietNatuurlijkPersoon `xml:"eenmanszaakMetMeerdereEigenaren,omitempty" json:"eenmanszaakMetMeerdereEigenaren,omitempty"`
-		Rechtspersoon                   *NietNatuurlijkPersoon `xml:"rechtspersoon,omitempty" json:"rechtspersoon,omitempty"`
-		RechtspersoonInOprichting       *NietNatuurlijkPersoon `xml:"rechtspersoonInOprichting,omitempty" json:"rechtspersoonInOprichting,omitempty"`
-		Samenwerkingsverband            *NietNatuurlijkPersoon `xml:"samenwerkingsverband,omitempty" json:"samenwerkingsverband,omitempty"`
-		AfgeslotenMoeder                *NietNatuurlijkPersoon `xml:"afgeslotenMoeder,omitempty" json:"afgeslotenMoeder,omitempty"`
-	} `xml:"heeftAlsEigenaar" json:"heeftAlsEigenaar"`
+		NaamPersoon                     *NietNatuurlijkPersoon `json:"naamPersoon,omitempty"`
+		Eenmanszaak                     *Eenmanszaak           `json:"natuurlijkPersoon,omitempty"`
+		BuitenlandseVennootschap        *NietNatuurlijkPersoon `json:"buitenlandseVennootschap,omitempty"`
+		EenmanszaakMetMeerdereEigenaren *NietNatuurlijkPersoon `json:"eenmanszaakMetMeerdereEigenaren,omitempty"`
+		Rechtspersoon                   *NietNatuurlijkPersoon `json:"rechtspersoon,omitempty"`
+		RechtspersoonInOprichting       *NietNatuurlijkPersoon `json:"rechtspersoonInOprichting,omitempty"`
+		Samenwerkingsverband            *NietNatuurlijkPersoon `json:"samenwerkingsverband,omitempty"`
+		AfgeslotenMoeder                *NietNatuurlijkPersoon `json:"afgeslotenMoeder,omitempty"`
+	} `json:"heeftAlsEigenaar"`
+}
+
+func (u *MaatschappelijkeActiviteit) UnmarshalJSON(data []byte) error {
+	type Alias MaatschappelijkeActiviteit
+	aux := &struct {
+		SbiActiviteit []SbiActiviteit `json:"sbiActiviteit"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		SbiActiviteit SbiActiviteit `json:"sbiActiviteit"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.SbiActiviteit = aux.SbiActiviteit
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.SbiActiviteit = []SbiActiviteit{
+		auxOne.SbiActiviteit,
+	}
+	return nil
+}
+
+type Onderneming struct {
+	SbiActiviteit []SbiActiviteit `json:"sbiActiviteit"`
+	HandeltOnder  []HandeltOnder  `json:"handeltOnder"`
+}
+
+func (u *Onderneming) UnmarshalJSON(data []byte) error {
+	type Alias Onderneming
+	aux := &struct {
+		SbiActiviteit []SbiActiviteit `json:"sbiActiviteit"`
+		HandeltOnder  []HandeltOnder  `json:"handeltOnder"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOneC := &struct {
+		SbiActiviteit SbiActiviteit  `json:"sbiActiviteit"`
+		HandeltOnder  []HandeltOnder `json:"handeltOnder"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOneE := &struct {
+		SbiActiviteit []SbiActiviteit `json:"sbiActiviteit"`
+		HandeltOnder  HandeltOnder    `json:"handeltOnder"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		SbiActiviteit SbiActiviteit `json:"sbiActiviteit"`
+		HandeltOnder  HandeltOnder  `json:"handeltOnder"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.SbiActiviteit = aux.SbiActiviteit
+		u.HandeltOnder = aux.HandeltOnder
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOneC)
+	if err == nil {
+		u.SbiActiviteit = []SbiActiviteit{
+			auxOneC.SbiActiviteit,
+		}
+		u.HandeltOnder = auxOneC.HandeltOnder
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOneE)
+	if err == nil {
+		u.SbiActiviteit = auxOneE.SbiActiviteit
+		u.HandeltOnder = []HandeltOnder{
+			auxOneE.HandeltOnder,
+		}
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.SbiActiviteit = []SbiActiviteit{
+		auxOne.SbiActiviteit,
+	}
+	u.HandeltOnder = []HandeltOnder{
+		auxOne.HandeltOnder,
+	}
+	return nil
+}
+
+type SbiActiviteit struct {
+	SbiCode struct {
+		Code         string `json:"code"`
+		Omschrijving string `json:"omschrijving"`
+	} `json:"sbiCode"`
+	IsHoofdactiviteit Enumeratie `json:"isHoofdactiviteit"`
+}
+
+type HandeltOnder struct {
+	Handelsnaam struct {
+		Naam string `json:"naam"`
+	} `json:"handelsnaam"`
+}
+
+type Communicatiegegevens struct {
+	EmailAdres         []string             `json:"emailAdres"`
+	Communicatienummer []Communicatienummer `json:"communicatienummer"`
+}
+
+func (u *Communicatiegegevens) UnmarshalJSON(data []byte) error {
+	type Alias Communicatiegegevens
+	aux := &struct {
+		Communicatienummer []Communicatienummer `json:"communicatienummer"`
+		EmailAdres         []string             `json:"emailAdres"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOneC := &struct {
+		Communicatienummer Communicatienummer `json:"communicatienummer"`
+		EmailAdres         []string           `json:"emailAdres"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOneE := &struct {
+		Communicatienummer []Communicatienummer `json:"communicatienummer"`
+		EmailAdres         string               `json:"emailAdres"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		Communicatienummer Communicatienummer `json:"communicatienummer"`
+		EmailAdres         string             `json:"emailAdres"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.Communicatienummer = aux.Communicatienummer
+		u.EmailAdres = aux.EmailAdres
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOneC)
+	if err == nil {
+		u.Communicatienummer = []Communicatienummer{
+			auxOneC.Communicatienummer,
+		}
+		u.EmailAdres = auxOneC.EmailAdres
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOneE)
+	if err == nil {
+		u.Communicatienummer = auxOneE.Communicatienummer
+		u.EmailAdres = []string{
+			auxOneE.EmailAdres,
+		}
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.Communicatienummer = []Communicatienummer{
+		auxOne.Communicatienummer,
+	}
+	u.EmailAdres = []string{
+		auxOne.EmailAdres,
+	}
+	return nil
+}
+
+type Communicatienummer struct {
+	Toegangscode string     `json:"toegangscode"`
+	Nummer       string     `json:"nummer"`
+	Soort        Enumeratie `json:"soort"`
 }
 
 type Eenmanszaak struct { // in KVK productstore this is 'natuurlijkPersoon' but that conflicts with NatuurlijkPersoon
-	Registratie                Registratie                `xml:"registratie" json:"registratie"`
-	PersoonRechtsvorm          string                     `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-	Geslachtsnaam              string                     `xml:"geslachtsnaam" json:"geslachtsnaam"`
-	Voornamen                  string                     `xml:"voornamen" json:"voornamen"`
-	VoorvoegselGeslachtsnaam   string                     `xml:"voorvoegselGeslachtsnaam" json:"voorvoegselGeslachtsnaam"`
-	Geboortedatum              string                     `xml:"geboortedatum" json:"geboortedatum"`
-	Overlijdensdatum           string                     `xml:"overlijdensdatum" json:"overlijdensdatum"`
-	VolledigeNaam              string                     `xml:"volledigeNaam" json:"volledigeNaam"`
-	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-	Handlichting               Handlichting               `xml:"handlichting" json:"handlichting"`
-	Heeft                      []Functievervulling        `xml:"heeft" json:"heeft"`
+	Registratie                Registratie                `json:"registratie"`
+	PersoonRechtsvorm          string                     `json:"persoonRechtsvorm"`
+	Geslachtsnaam              string                     `json:"geslachtsnaam"`
+	Voornamen                  string                     `json:"voornamen"`
+	VoorvoegselGeslachtsnaam   string                     `json:"voorvoegselGeslachtsnaam"`
+	Geboortedatum              string                     `json:"geboortedatum"`
+	Overlijdensdatum           string                     `json:"overlijdensdatum"`
+	VolledigeNaam              string                     `json:"volledigeNaam"`
+	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+	Handlichting               Handlichting               `json:"handlichting"`
+	Heeft                      []Functievervulling        `json:"heeft,omitempty"`
+}
+
+func (u *Eenmanszaak) UnmarshalJSON(data []byte) error {
+	type Alias Eenmanszaak
+	aux := &struct {
+		Heeft []Functievervulling `json:"heeft"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		Heeft Functievervulling `json:"heeft"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.Heeft = aux.Heeft
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.Heeft = []Functievervulling{
+		auxOne.Heeft,
+	}
+	return nil
 }
 
 type NietNatuurlijkPersoon struct {
-	Rsin                       string                     `xml:"rsin" json:"rsin"`
-	Registratie                Registratie                `xml:"registratie" json:"registratie"`
-	DatumUitschrijving         string                     `xml:"datumUitschrijving" json:"datumUitschrijving"`
-	PersoonRechtsvorm          string                     `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-	Ontbinding                 Ontbinding                 `xml:"ontbinding" json:"ontbinding"`
-	Heeft                      []Functievervulling        `xml:"heeft" json:"heeft"`
-	// LandVanVestiging           Enumeratie                  `xml:"landVanVestiging" json:"landVanVestiging"`
+	Rsin                       string                     `json:"rsin"`
+	Registratie                Registratie                `json:"registratie"`
+	DatumUitschrijving         string                     `json:"datumUitschrijving"`
+	PersoonRechtsvorm          string                     `json:"persoonRechtsvorm"`
+	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+	Ontbinding                 Ontbinding                 `json:"ontbinding"`
+	Heeft                      []Functievervulling        `json:"heeft,omitempty"`
+	// LandVanVestiging           Enumeratie                  `json:"landVanVestiging"`
+}
+
+func (u *NietNatuurlijkPersoon) UnmarshalJSON(data []byte) error {
+	type Alias NietNatuurlijkPersoon
+	aux := &struct {
+		Heeft []Functievervulling `json:"heeft"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		Heeft Functievervulling `json:"heeft"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.Heeft = aux.Heeft
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.Heeft = []Functievervulling{
+		auxOne.Heeft,
+	}
+	return nil
 }
 
 // type NaamPersoon struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 // type BuitenlandseVennootschap struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
-// 	// LandVanVestiging           Enumeratie                  `xml:"landVanVestiging" json:"landVanVestiging"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
+// 	// LandVanVestiging           Enumeratie                  `json:"landVanVestiging"`
 // }
 
 // type EenmanszaakMetMeerdereEigenaren struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 // type Rechtspersoon struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 // type RechtspersoonInOprichting struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 // type Samenwerkingsverband struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 // type AfgeslotenMoeder struct {
-// 	Registratie                Registratie                 `xml:"registratie" json:"registratie"`
-// 	DatumUitschrijving         string                      `xml:"datumUitschrijving" json:"datumUitschrijving"`
-// 	PersoonRechtsvorm          string                      `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
-// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `xml:"buitenlandseRechtstoestand" json:"buitenlandseRechtstoestand"`
-// 	Ontbinding                 Ontbinding                `xml:"ontbinding" json:"ontbinding"`
-// 	Heeft                      []FunctieVervulling         `xml:"heeft" json:"heeft"`
+// 	Registratie                Registratie                 `json:"registratie"`
+// 	DatumUitschrijving         string                      `json:"datumUitschrijving"`
+// 	PersoonRechtsvorm          string                      `json:"persoonRechtsvorm"`
+// 	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+// 	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
+// 	BuitenlandseRechtstoestand BuitenlandseRechtstoestand `json:"buitenlandseRechtstoestand"`
+// 	Ontbinding                 Ontbinding                `json:"ontbinding"`
+// 	Heeft                      []FunctieVervulling         `json:"heeft"`
 // }
 
 type Functievervulling struct {
-	Aansprakelijke                       *FunctionarisOfGemachtigde `xml:"aansprakelijke,omitempty" json:"aansprakelijke,omitempty"`
-	Bestuursfunctie                      *FunctionarisOfGemachtigde `xml:"bestuursfunctie,omitempty" json:"bestuursfunctie,omitempty"`
-	FunctionarisBijzondereRechtstoestand *FunctionarisOfGemachtigde `xml:"functionarisBijzondereRechtstoestand,omitempty" json:"functionarisBijzondereRechtstoestand,omitempty"`
-	Gemachtigde                          *FunctionarisOfGemachtigde `xml:"gemachtigde,omitempty" json:"gemachtigde,omitempty"`
-	OverigeFunctionaris                  *FunctionarisOfGemachtigde `xml:"overigeFunctionaris,omitempty" json:"overigeFunctionaris,omitempty"`
-	PubliekrechtelijkeFunctionaris       *FunctionarisOfGemachtigde `xml:"publiekrechtelijkeFunctionaris,omitempty" json:"publiekrechtelijkeFunctionaris,omitempty"`
+	Aansprakelijke                       *FunctionarisOfGemachtigde `json:"aansprakelijke,omitempty"`
+	Bestuursfunctie                      *FunctionarisOfGemachtigde `json:"bestuursfunctie,omitempty"`
+	FunctionarisBijzondereRechtstoestand *FunctionarisOfGemachtigde `json:"functionarisBijzondereRechtstoestand,omitempty"`
+	Gemachtigde                          *FunctionarisOfGemachtigde `json:"gemachtigde,omitempty"`
+	OverigeFunctionaris                  *FunctionarisOfGemachtigde `json:"overigeFunctionaris,omitempty"`
+	PubliekrechtelijkeFunctionaris       *FunctionarisOfGemachtigde `json:"publiekrechtelijkeFunctionaris,omitempty"`
 }
 
 type Door struct {
-	NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon,omitempty" json:"natuurlijkPersoon,omitempty"`
-	Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon,omitempty" json:"rechtspersoon,omitempty"`
+	NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon,omitempty"`
+	Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon,omitempty"`
 }
 
 type FunctionarisOfGemachtigde struct {
-	Functie      Enumeratie `xml:"functie" json:"functie"`
+	Functie      Enumeratie `json:"functie"`
 	Functietitel struct {
-		Titel string `xml:"titel" json:"titel"`
-	} `xml:"functietitel" json:"functietitel"`
-	Bevoegdheid  Bevoegdheid  `xml:"bevoegdheid" json:"bevoegdheid"`
-	Volmacht     Volmacht     `xml:"volmacht" json:"volmacht"`
-	Handlichting Handlichting `xml:"handlichting" json:"handlichting"`
-	Schorsing    Schorsing    `xml:"schorsing" json:"schorsing"`
-	Door         Door         `xml:"door" json:"door"`
+		Titel string `json:"titel"`
+	} `json:"functietitel"`
+	Bevoegdheid  Bevoegdheid  `json:"bevoegdheid"`
+	Volmacht     Volmacht     `json:"volmacht"`
+	Handlichting Handlichting `json:"handlichting"`
+	Schorsing    Schorsing    `json:"schorsing"`
+	Door         Door         `json:"door"`
 }
 
 // type Gemachtigde struct {
-// 	Functie      Enumeratie `xml:"functie" json:"functie"`
+// 	Functie      Enumeratie `json:"functie"`
 // 	Functietitel struct {
-// 		Titel string `xml:"titel" json:"titel"`
-// 	} `xml:"functietitel" json:"functietitel"`
-// 	Volmacht  Volmacht  `xml:"volmacht" json:"volmacht"`
-// 	Schorsing Schorsing `xml:"schorsing" json:"schorsing"`
-// 	Door      Door      `xml:"door" json:"door"`
+// 		Titel string `json:"titel"`
+// 	} `json:"functietitel"`
+// 	Volmacht  Volmacht  `json:"volmacht"`
+// 	Schorsing Schorsing `json:"schorsing"`
+// 	Door      Door      `json:"door"`
 // }
 
 // type Aansprakelijke struct {
-// 	Functie      Enumeratie    `xml:"functie" json:"functie"`
-// 	Bevoegdheid  Bevoegdheid   `xml:"bevoegdheid" json:"bevoegdheid"`
-// 	Handlichting Handlichting `xml:"handlichting" json:"handlichting"`
-// 	Schorsing    Schorsing    `xml:"schorsing" json:"schorsing"`
+// 	Functie      Enumeratie    `json:"functie"`
+// 	Bevoegdheid  Bevoegdheid   `json:"bevoegdheid"`
+// 	Handlichting Handlichting `json:"handlichting"`
+// 	Schorsing    Schorsing    `json:"schorsing"`
 // 	Door         struct {
-// 		NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon" json:"natuurlijkPersoon"`
-// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon" json:"rechtspersoon"`
-// 	} `xml:"door" json:"door"`
+// 		NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon"`
+// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon"`
+// 	} `json:"door"`
 // }
 
 // type Bestuursfunctie struct {
-// 	Functie      Enumeratie `xml:"functie" json:"functie"`
+// 	Functie      Enumeratie `json:"functie"`
 // 	Functietitel struct {
-// 		Titel string `xml:"titel" json:"titel"`
-// 	} `xml:"functietitel" json:"functietitel"`
-// 	Bevoegdheid Bevoegdheid `xml:"bevoegdheid" json:"bevoegdheid"`
-// 	Schorsing   Schorsing  `xml:"schorsing" json:"schorsing"`
+// 		Titel string `json:"titel"`
+// 	} `json:"functietitel"`
+// 	Bevoegdheid Bevoegdheid `json:"bevoegdheid"`
+// 	Schorsing   Schorsing  `json:"schorsing"`
 // 	Door        struct {
-// 		NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon" json:"natuurlijkPersoon"`
-// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon" json:"rechtspersoon"`
-// 	} `xml:"door" json:"door"`
+// 		NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon"`
+// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon"`
+// 	} `json:"door"`
 // }
 
 // type FunctionarisBijzondereRechtstoestand struct {
-// 	Functie   Enumeratie `xml:"functie" json:"functie"`
-// 	Schorsing Schorsing `xml:"schorsing" json:"schorsing"`
+// 	Functie   Enumeratie `json:"functie"`
+// 	Schorsing Schorsing `json:"schorsing"`
 // 	Door      struct {
-// 		NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon" json:"natuurlijkPersoon"`
-// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon" json:"rechtspersoon"`
-// 	} `xml:"door" json:"door"`
+// 		NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon"`
+// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon"`
+// 	} `json:"door"`
 // }
 
 // type OverigeFunctionaris struct {
-// 	Functie     Enumeratie  `xml:"functie" json:"functie"`
-// 	Bevoegdheid Bevoegdheid `xml:"bevoegdheid" json:"bevoegdheid"`
-// 	Schorsing   Schorsing  `xml:"schorsing" json:"schorsing"`
+// 	Functie     Enumeratie  `json:"functie"`
+// 	Bevoegdheid Bevoegdheid `json:"bevoegdheid"`
+// 	Schorsing   Schorsing  `json:"schorsing"`
 // 	Door        struct {
-// 		NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon" json:"natuurlijkPersoon"`
-// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon" json:"rechtspersoon"`
-// 	} `xml:"door" json:"door"`
+// 		NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon"`
+// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon"`
+// 	} `json:"door"`
 // }
 
 // type PubliekrechtelijkeFunctionaris struct {
-// 	Functie     Enumeratie  `xml:"functie" json:"functie"`
-// 	Bevoegdheid Bevoegdheid `xml:"bevoegdheid" json:"bevoegdheid"`
-// 	Schorsing   Schorsing  `xml:"schorsing" json:"schorsing"`
+// 	Functie     Enumeratie  `json:"functie"`
+// 	Bevoegdheid Bevoegdheid `json:"bevoegdheid"`
+// 	Schorsing   Schorsing  `json:"schorsing"`
 // 	Door        struct {
-// 		NatuurlijkPersoon *NatuurlijkPersoon            `xml:"natuurlijkPersoon" json:"natuurlijkPersoon"`
-// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `xml:"rechtspersoon" json:"rechtspersoon"`
-// 	} `xml:"door" json:"door"`
+// 		NatuurlijkPersoon *NatuurlijkPersoon            `json:"natuurlijkPersoon"`
+// 		Rechtspersoon     *RechtspersoonAlsFunctionaris `json:"rechtspersoon"`
+// 	} `json:"door"`
 // }
 
 type Bevoegdheid struct {
-	Soort            Enumeratie `xml:"soort" json:"soort"`
+	Soort            Enumeratie `json:"soort"`
 	BeperkingInEuros struct {
-		Waarde string     `xml:"waarde" json:"waarde"`
-		Valuta Enumeratie `xml:"valuta" json:"valuta"`
-	} `xml:"beperkingInEuros" json:"beperkingInEuros"`
-	OverigeBeperking           Enumeratie `xml:"overigeBeperking" json:"overigeBeperking"`
-	IsBevoegdMetAnderePersonen Enumeratie `xml:"isBevoegdMetAnderePersonen" json:"isBevoegdMetAnderePersonen"`
-}
-
-type BeperkingInHandeling struct {
-	SoortHandeling Enumeratie `xml:"soortHandeling" json:"soortHandeling"`
+		Waarde string     `json:"waarde"`
+		Valuta Enumeratie `json:"valuta"`
+	} `json:"beperkingInEuros"`
+	OverigeBeperking           Enumeratie `json:"overigeBeperking"`
+	IsBevoegdMetAnderePersonen Enumeratie `json:"isBevoegdMetAnderePersonen"`
 }
 
 type Volmacht struct {
-	TypeVolmacht     Enumeratie `xml:"typeVolmacht" json:"typeVolmacht"`
-	BeperkteVolmacht struct {
-		BeperkingInHandeling []BeperkingInHandeling `xml:"beperkingInHandeling" json:"beperkingInHandeling"`
-		BeperkingInGeld      struct {
-			Waarde string     `xml:"waarde" json:"waarde"`
-			Valuta Enumeratie `xml:"valuta" json:"valuta"`
-		} `xml:"beperkingInGeld" json:"beperkingInGeld"`
-		MagOpgaveHandelsregisterDoen Enumeratie `xml:"magOpgaveHandelsregisterDoen" json:"magOpgaveHandelsregisterDoen"`
-		HeeftOverigeVolmacht         Enumeratie `xml:"heeftOverigeVolmacht" json:"heeftOverigeVolmacht"`
-		OmschrijvingOverigeVolmacht  string     `xml:"omschrijvingOverigeVolmacht" json:"omschrijvingOverigeVolmacht"`
-	} `xml:"beperkteVolmacht" json:"beperkteVolmacht"`
+	TypeVolmacht     Enumeratie       `json:"typeVolmacht"`
+	BeperkteVolmacht BeperkteVolmacht `json:"beperkteVolmacht"`
+}
+
+type BeperkteVolmacht struct {
+	BeperkingInHandeling []BeperkingInHandeling `json:"beperkingInHandeling"`
+	BeperkingInGeld      struct {
+		Waarde string     `json:"waarde"`
+		Valuta Enumeratie `json:"valuta"`
+	} `json:"beperkingInGeld"`
+	MagOpgaveHandelsregisterDoen Enumeratie `json:"magOpgaveHandelsregisterDoen"`
+	HeeftOverigeVolmacht         Enumeratie `json:"heeftOverigeVolmacht"`
+	OmschrijvingOverigeVolmacht  string     `json:"omschrijvingOverigeVolmacht"`
+}
+
+type BeperkingInHandeling struct {
+	SoortHandeling Enumeratie `json:"soortHandeling"`
+}
+
+func (u *BeperkteVolmacht) UnmarshalJSON(data []byte) error {
+	type Alias BeperkteVolmacht
+	aux := &struct {
+		BeperkingInHandeling []BeperkingInHandeling `json:"beperkingInHandeling"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	auxOne := &struct {
+		BeperkingInHandeling BeperkingInHandeling `json:"beperkingInHandeling"`
+		*Alias
+	}{
+		Alias: (*Alias)(u),
+	}
+	err := json.Unmarshal(data, &aux)
+	if err == nil {
+		u.BeperkingInHandeling = aux.BeperkingInHandeling
+		return nil
+	}
+	err = json.Unmarshal(data, &auxOne)
+	if err != nil {
+		return err
+	}
+	u.BeperkingInHandeling = []BeperkingInHandeling{
+		auxOne.BeperkingInHandeling,
+	}
+	return nil
 }
 
 type NatuurlijkPersoon struct {
-	Geslachtsnaam              string                     `xml:"geslachtsnaam" json:"geslachtsnaam"`
-	VoorvoegselGeslachtsnaam   string                     `xml:"voorvoegselGeslachtsnaam" json:"voorvoegselGeslachtsnaam"`
-	Voornamen                  string                     `xml:"voornamen" json:"voornamen"`
-	Geboortedatum              string                     `xml:"geboortedatum" json:"geboortedatum"`
-	Overlijdensdatum           string                     `xml:"overlijdensdatum" json:"overlijdensdatum"`
-	VolledigeNaam              string                     `xml:"volledigeNaam" json:"volledigeNaam"`
-	BijzondereRechtstoestand   BijzondereRechtstoestand   `xml:"bijzondereRechtstoestand" json:"bijzondereRechtstoestand"`
-	BeperkingInRechtshandeling BeperkingInRechtshandeling `xml:"beperkingInRechtshandeling" json:"beperkingInRechtshandeling"`
+	Geslachtsnaam              string                     `json:"geslachtsnaam"`
+	VoorvoegselGeslachtsnaam   string                     `json:"voorvoegselGeslachtsnaam"`
+	Voornamen                  string                     `json:"voornamen"`
+	Geboortedatum              string                     `json:"geboortedatum"`
+	Overlijdensdatum           string                     `json:"overlijdensdatum"`
+	VolledigeNaam              string                     `json:"volledigeNaam"`
+	BijzondereRechtstoestand   BijzondereRechtstoestand   `json:"bijzondereRechtstoestand"`
+	BeperkingInRechtshandeling BeperkingInRechtshandeling `json:"beperkingInRechtshandeling"`
 }
 
 type RechtspersoonAlsFunctionaris struct {
-	PersoonRechtsvorm string `xml:"persoonRechtsvorm" json:"persoonRechtsvorm"`
-	VolledigeNaam     string `xml:"volledigeNaam" json:"volledigeNaam"`
+	PersoonRechtsvorm string `json:"persoonRechtsvorm"`
+	VolledigeNaam     string `json:"volledigeNaam"`
 	IsEigenaarVan     struct {
 		MaatschappelijkeActiviteit struct {
-			KvkNummer string `xml:"kvkNummer" json:"kvkNummer"`
-		} `xml:"maatschappelijkeActiviteit" json:"maatschappelijkeActiviteit"`
-	} `xml:"isEigenaarVan" json:"isEigenaarVan"`
+			KvkNummer string `json:"kvkNummer"`
+		} `json:"maatschappelijkeActiviteit"`
+	} `json:"isEigenaarVan"`
 }
 
 type BijzondereRechtstoestand struct {
-	Registratie Registratie `xml:"registratie" json:"registratie"`
-	Soort       Enumeratie  `xml:"soort" json:"soort"`
+	Registratie Registratie `json:"registratie"`
+	Soort       Enumeratie  `json:"soort"`
 }
 
 type BeperkingInRechtshandeling struct {
-	Registratie Registratie `xml:"registratie" json:"registratie"`
-	Soort       Enumeratie  `xml:"soort" json:"soort"`
+	Registratie Registratie `json:"registratie"`
+	Soort       Enumeratie  `json:"soort"`
 }
 
 type BuitenlandseRechtstoestand struct {
-	Registratie  Registratie `xml:"registratie" json:"registratie"`
-	Beschrijving string      `xml:"beschrijving" json:"beschrijving"`
+	Registratie  Registratie `json:"registratie"`
+	Beschrijving string      `json:"beschrijving"`
 }
 
 type Handlichting struct {
-	Registratie Registratie `xml:"registratie" json:"registratie"`
-	IsVerleend  Enumeratie  `xml:"isVerleend" json:"isVerleend"`
+	Registratie Registratie `json:"registratie"`
+	IsVerleend  Enumeratie  `json:"isVerleend"`
 }
 
 type Ontbinding struct {
-	Registratie Registratie `xml:"registratie" json:"registratie"`
-	Aanleiding  Enumeratie  `xml:"aanleiding" json:"aanleiding"`
+	Registratie Registratie `json:"registratie"`
+	Aanleiding  Enumeratie  `json:"aanleiding"`
 	Liquidatie  struct {
-		Registratie Registratie `xml:"registratie" json:"registratie"`
-	} `xml:"liquidatie" json:"liquidatie"`
+		Registratie Registratie `json:"registratie"`
+	} `json:"liquidatie"`
 }
 
 type Schorsing struct {
-	Registratie Registratie `xml:"registratie" json:"registratie"`
+	Registratie Registratie `json:"registratie"`
 }
 
 type Registratie struct {
-	RegistratieTijdstip string `xml:"registratieTijdstip" json:"registratieTijdstip"`
-	DatumAanvang        string `xml:"datumAanvang" json:"datumAanvang"`
-	DatumEinde          string `xml:"datumEinde" json:"datumEinde"`
+	RegistratieTijdstip string `json:"registratieTijdstip"`
+	DatumAanvang        string `json:"datumAanvang"`
+	DatumEinde          string `json:"datumEinde"`
 }
 
 type Enumeratie struct {
-	Code           string `xml:"code" json:"code"`
-	Omschrijving   string `xml:"omschrijving" json:"omschrijving"`
-	ReferentieType string `xml:"referentieType" json:"referentieType"`
+	Code           string `json:"code"`
+	Omschrijving   string `json:"omschrijving"`
+	ReferentieType string `json:"referentieType"`
 }

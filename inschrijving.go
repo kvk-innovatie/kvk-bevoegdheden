@@ -3,20 +3,73 @@ package bevoegdheden
 import (
 	"context"
 	"crypto/tls"
-	"encoding/xml"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/kvk-innovatie/kvk-bevoegdheden/models"
-	"github.com/kvk-innovatie/kvk-bevoegdheden/soap"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 var ErrInschrijvingNotFound = errors.New("inschrijving niet gevonden op basis van het KVK nummer")
+var ErrParseInschrijving = errors.New("inschrijving parse error")
+
+type KvkDataServiceResponse struct {
+	MetaData struct {
+		RawJson string `json:"rawJson,omitempty"`
+	} `json:"metadata,omitempty"`
+}
+
+// IsDisallowedIP parses the ip to determine if we should allow the HTTP client to continue
+func IsDisallowedIP(hostIP string) bool {
+	ip := net.ParseIP(hostIP)
+	return ip.IsMulticast() || ip.IsUnspecified() || ip.IsLoopback() || ip.IsPrivate()
+}
+
+// SafeTransport uses the net.Dial to connect, then if successful check if the resolved
+// ip address is disallowed. We do this due to hosts such as localhost.lol being resolvable to
+// potentially malicious URLs. We allow connection only for resolution purposes.
+func SafeTransport(timeout time.Duration) *http.Transport {
+	return &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			c, err := net.DialTimeout(network, addr, timeout)
+			if err != nil {
+				return nil, err
+			}
+			ip, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			if IsDisallowedIP(ip) {
+				return nil, errors.New("ip address is not allowed")
+			}
+			return c, err
+		},
+		DialTLS: func(network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{Timeout: timeout}
+			c, err := tls.DialWithDialer(dialer, network, addr, &tls.Config{})
+			if err != nil {
+				return nil, err
+			}
+
+			ip, _, _ := net.SplitHostPort(c.RemoteAddr().String())
+			if IsDisallowedIP(ip) {
+				return nil, errors.New("ip address is not allowed")
+			}
+
+			err = c.Handshake()
+			if err != nil {
+				return c, err
+			}
+
+			return c, c.Handshake()
+		},
+		TLSHandshakeTimeout: timeout,
+	}
+}
 
 func getFilePath(kvkNummer string) string {
 	// make it possible to annotate cached files in the filename as postfix
@@ -38,111 +91,79 @@ func getFilePath(kvkNummer string) string {
 	return filePath
 }
 
-func GetInschrijving(kvkNummer, cert, key string, useCache bool, env string) (*models.OphalenInschrijvingResponse, error) {
-	cachePath := "cache-inschrijvingen"
-	ophalenInschrijvingResponse := models.OphalenInschrijvingResponse{}
-
+func GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL string, useCache bool, env string) (*models.OphalenInschrijvingResponse, error, string) {
+	var hrResponse models.HrResponse
 	if useCache {
 		filePath := getFilePath(kvkNummer)
 		respBody, err := os.ReadFile(filePath)
 		if err == nil {
 			fmt.Println("using cache")
-			envelope := soap.NewEnvelope(&ophalenInschrijvingResponse)
 
-			if err := xml.Unmarshal(respBody, envelope); err != nil {
-				panic(err)
+			if err := json.Unmarshal(respBody, &hrResponse); err != nil {
+				return nil, ErrParseInschrijving, string(respBody)
 			}
-			r := envelope.Body.Content.(*models.OphalenInschrijvingResponse)
 
-			r.InschrijvingXML = string(respBody)
-			return r, nil
+			return &hrResponse.Envelope.Body.OphalenInschrijvingResponse, nil, string(respBody)
 		}
 	}
 
-	if cert == "" || key == "" {
-		return nil, errors.New("no certificate or private key, so no connection possible with HRDS")
+	conf := &clientcredentials.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     authServerURL + "/token",
 	}
 
-	fmt.Println("not using cache")
-
-	wsseInfo, authErr := soap.NewWSSEAuthInfo(cert, key)
-	if authErr != nil {
-		fmt.Printf("Auth error: %s\n", authErr.Error())
-		return nil, authErr
-	}
-
-	ophalenInschrijvingRequest := models.OphalenInschrijvingRequest{
-		KvkNummer: kvkNummer,
-	}
-
-	url := "https://webservices.preprod.kvk.nl/postbus2"
-	toAddress := "http://es.kvk.nl/KVK-DataservicePP/2015/02"
-
-	if env == "prd" {
-		url = "https://webservices.kvk.nl/postbus2"
-		toAddress = "http://es.kvk.nl/KVK-Dataservice/2015/02"
-	}
-
-	soapReq := soap.NewRequest("http://es.kvk.nl/ophalenInschrijving", url, ophalenInschrijvingRequest, &ophalenInschrijvingResponse, nil)
-
-	soapReq.AddHeader(soap.ActionHeader{
-		ID:    "_2",
-		Value: "http://es.kvk.nl/ophalenInschrijving",
-	})
-	soapReq.AddHeader(soap.MessageIDHeader{
-		ID:    "_3",
-		Value: "uuid:" + uuid.New().String(),
-	})
-	soapReq.AddHeader(soap.ToHeader{
-		ID:      "_4",
-		Address: toAddress,
-	})
-
-	soapReq.SignWith(wsseInfo)
-
-	certificate, _ := tls.X509KeyPair([]byte(cert), []byte(key))
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				Certificates: []tls.Certificate{certificate},
-			},
-		},
-	}
-
-	soapClient := soap.NewClient(client)
-
-	soapResp, err := soapClient.Do(context.Background(), soapReq)
+	tok, err := conf.Token(context.Background())
 	if err != nil {
-		fmt.Printf("Unable to validate: %s\n", err.Error())
-		return nil, err
-	} else if soapResp.StatusCode != http.StatusOK {
-		fmt.Printf("Unable to validate (status code invalid): %d\n", soapResp.StatusCode)
-		return nil, err
-	} else if ophalenInschrijvingResponse.Meldingen.Fout != nil {
-		fmt.Printf("SOAP fault experienced during call: %s\n", ophalenInschrijvingResponse.Meldingen.Fout.Omschrijving)
-		if ophalenInschrijvingResponse.Meldingen.Fout.Code == "IPD0004" {
-			return nil, ErrInschrijvingNotFound
-		}
-		return nil, errors.New(ophalenInschrijvingResponse.Meldingen.Fout.Omschrijving)
+		fmt.Println(err)
+	}
+	if !tok.Valid() {
+		fmt.Printf("token invalid. got: %#v", tok)
 	}
 
-	if useCache {
-		if _, err := os.Stat(cachePath); os.IsNotExist(err) {
-			os.MkdirAll(cachePath, 0700)
-		}
-		_ = os.WriteFile(cachePath+"/"+kvkNummer+".xml", soapResp.RespBody, 0644)
+	url := fmt.Sprintf("https://api.signicat.com/info/lookup/countries/nl/organizations/%s?source=kvk-dataservice&rawJSON=true", kvkNummer)
+
+	const clientConnectTimeout = time.Second * 10
+	client := &http.Client{
+		Transport: SafeTransport(clientConnectTimeout),
 	}
 
-	ophalenInschrijvingResponse.InschrijvingXML = string(soapResp.RespBody)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	// ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
-	// jsonMA, _ := json.MarshalIndent(ma, "", "  ")
-	// _ = os.WriteFile("inschrijving.json", jsonMA, 0644)
+	req.Header.Set("Authorization", "Bearer "+tok.AccessToken)
+	resp, err := client.Do(req)
+	if resp.StatusCode == 404 {
+		return nil, ErrInschrijvingNotFound, ""
+	} else if err != nil {
+		panic(err)
+	}
 
-	// data, _ := os.ReadFile("all.json")
-	// bvgn := []models.Bevoegdheid{}
-	// _ = json.Unmarshal(data, &bvgn)
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
 
-	return &ophalenInschrijvingResponse, nil
+	var kvkDataServiceResponse KvkDataServiceResponse
+	err = json.Unmarshal(body, &kvkDataServiceResponse)
+	if err != nil {
+		panic(err)
+	}
+
+	// if useCache {
+	// 	cachePath := "cache-inschrijvingen"
+	// 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
+	// 		os.MkdirAll(cachePath, 0700)
+	// 	}
+	// 	_ = os.WriteFile(cachePath+"/"+kvkNummer+".json", []byte(kvkDataServiceResponse.MetaData.RawJson), 0644)
+	// }
+	err = json.Unmarshal([]byte(kvkDataServiceResponse.MetaData.RawJson), &hrResponse)
+	if err != nil {
+		return nil, ErrParseInschrijving, kvkDataServiceResponse.MetaData.RawJson
+	}
+
+	return &hrResponse.Envelope.Body.OphalenInschrijvingResponse, nil, kvkDataServiceResponse.MetaData.RawJson
 }

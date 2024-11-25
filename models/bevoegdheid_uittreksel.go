@@ -5,6 +5,7 @@ type IdentityNP struct {
 	VoorvoegselGeslachtsnaam string `json:"voorvoegselGeslachtsnaam"`
 	Voornamen                string `json:"voornamen"`
 	Geboortedatum            string `json:"geboortedatum"`
+	VolledigeNaam            string `json:"volledigeNaam"`
 }
 
 type Interpretatie struct {
@@ -14,12 +15,9 @@ type Interpretatie struct {
 }
 
 type BevoegdheidResponse struct {
-	BevoegdheidUittreksel *BevoegdheidUittreksel `json:"bevoegdheidUittreksel"`
-
-	Inschrijving    *MaatschappelijkeActiviteit `json:"inschrijving"`
-	InschrijvingXML string                      `json:"inschrijvingXML"`
-
-	Paths *Paths `json:"paths"`
+	BevoegdheidUittreksel *BevoegdheidUittreksel      `json:"bevoegdheidUittreksel"`
+	Inschrijving          *MaatschappelijkeActiviteit `json:"-"`
+	Paths                 *Paths                      `json:"-"`
 }
 
 type BevoegdheidUittreksel struct {
@@ -43,28 +41,12 @@ type BevoegdheidUittreksel struct {
 
 	Peilmoment string `json:"peilmoment"`
 
-	MatchedFunctionaris              *Functionaris               `json:"matchedFunctionaris,omitempty"`
-	AlleFunctionarissen              []Functionaris              `json:"functionarissen"`
-	AlleRechtspersoonFunctionarissen []RechtspersoonFunctionaris `json:"rechtspersoonFunctionarissen"`
-}
-
-type RechtspersoonFunctionaris struct {
-	KvkNummer         string `json:"kvkNummer"`
-	PersoonRechtsvorm string `json:"persoonRechtsvorm"`
-	Naam              string `json:"naam"`
-
-	TypeFunctionaris string `json:"typeFunctionaris"`
-	Functie          string `json:"functie"`
+	MatchedFunctionaris              *NatuurlijkPersoonFunctionaris  `json:"matchedFunctionaris,omitempty"`
+	AlleFunctionarissen              []NatuurlijkPersoonFunctionaris `json:"functionarissen"`
+	AlleRechtspersoonFunctionarissen []RechtspersoonFunctionaris     `json:"rechtspersoonFunctionarissen"`
 }
 
 type Functionaris struct {
-	Geslachtsnaam            string `json:"geslachtsnaam"`
-	VoorvoegselGeslachtsnaam string `json:"voorvoegselGeslachtsnaam"`
-	Voornamen                string `json:"voornamen"`
-	Geboortedatum            string `json:"geboortedatum"`
-	Overlijdensdatum         string `json:"overlijdensdatum"`
-	VolledigeNaam            string `json:"volledigeNaam"`
-
 	TypeFunctionaris string `json:"typeFunctionaris"`
 	Functie          string `json:"functie"`
 	Functietitel     string `json:"functietitel"`
@@ -81,15 +63,35 @@ type Functionaris struct {
 	OmschrijvingOverigeVolmacht  string `json:"omschrijvingOverigeVolmacht"`
 	MagOpgaveHandelsregisterDoen string `json:"magOpgaveHandelsregisterDoen"`
 
-	BijzondereRechtstoestand   string `json:"bijzondereRechtstoestandFunctionaris"`
-	BeperkingInRechtshandeling string `json:"beperkingInRechtshandelingFunctionaris"`
-	SchorsingAanvang           string `json:"schorsingAanvang"`
-	SchorsingEinde             string `json:"schorsingEinde"`
-	Handlichting               string `json:"handlichting"`
+	SchorsingAanvang string `json:"schorsingAanvang"`
+	SchorsingEinde   string `json:"schorsingEinde"`
+	Handlichting     string `json:"handlichting"`
 
 	Interpretatie Interpretatie `json:"interpretatie"`
 
-	Importance int64 `json:"-"`
+	Importance int64 `json:"importance"`
+}
+
+type NatuurlijkPersoonFunctionaris struct {
+	Geslachtsnaam            string `json:"geslachtsnaam"`
+	VoorvoegselGeslachtsnaam string `json:"voorvoegselGeslachtsnaam"`
+	Voornamen                string `json:"voornamen"`
+	Geboortedatum            string `json:"geboortedatum"`
+	Overlijdensdatum         string `json:"overlijdensdatum"`
+	VolledigeNaam            string `json:"volledigeNaam"`
+
+	BijzondereRechtstoestand   string `json:"bijzondereRechtstoestandFunctionaris"`
+	BeperkingInRechtshandeling string `json:"beperkingInRechtshandelingFunctionaris"`
+
+	Functionaris
+}
+
+type RechtspersoonFunctionaris struct {
+	KvkNummer         string `json:"kvkNummer"`
+	PersoonRechtsvorm string `json:"persoonRechtsvorm"`
+	Naam              string `json:"naam"`
+
+	Functionaris
 }
 
 type Paths struct {
@@ -111,5 +113,5 @@ type Paths struct {
 	BeperkingInRechtshandeling string `json:"beperkingInRechtshandeling"`
 	BuitenlandseRechtstoestand string `json:"buitenlandseRechtstoestand"`
 
-	MatchedFunctionaris Functionaris `json:"matchedFunctionaris,omitempty"`
+	MatchedFunctionaris NatuurlijkPersoonFunctionaris `json:"matchedFunctionaris,omitempty"`
 }

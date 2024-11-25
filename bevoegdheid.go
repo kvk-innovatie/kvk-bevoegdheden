@@ -25,7 +25,7 @@ func validateInput(kvkNummer string, identityNP models.IdentityNP) error {
 		return ErrInvalidInput
 	}
 	if identityNP.Voornamen == "" || identityNP.Geslachtsnaam == "" || identityNP.Geboortedatum == "" || len(identityNP.Geboortedatum) != 10 {
-		fmt.Println("persoonsgegeven klopt niet")
+		fmt.Println("persoonsgegevens kloppen niet")
 		return ErrInvalidInput
 	}
 	gb := identityNP.Geboortedatum
@@ -37,15 +37,15 @@ func validateInput(kvkNummer string, identityNP models.IdentityNP) error {
 	return nil
 }
 
-func GetBevoegdheid(kvkNummer string, identityNP models.IdentityNP, cert string, key string, useCache bool, env string) (*models.BevoegdheidResponse, error) {
+func GetBevoegdheid(kvkNummer string, identityNP models.IdentityNP, clientID, clientSecret, authServerURL string, useCache bool, env string) (*models.BevoegdheidResponse, error, string) {
 	err := validateInput(kvkNummer, identityNP)
 	if err != nil {
-		return nil, err
+		return nil, err, ""
 	}
 
-	ophalenInschrijvingResponse, err := GetInschrijving(kvkNummer, cert, key, useCache, env)
+	ophalenInschrijvingResponse, err, rawResponse := GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL, useCache, env)
 	if err != nil {
-		return nil, err
+		return nil, err, rawResponse
 	}
 
 	bevoegdheidUittreksel := &models.BevoegdheidUittreksel{}
@@ -58,8 +58,7 @@ func GetBevoegdheid(kvkNummer string, identityNP models.IdentityNP, cert string,
 	getBevoegdheidUittreksel(bevoegdheidUittreksel, paths, ophalenInschrijvingResponse, identityNP)
 
 	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
-	bevoegdheidResponse.InschrijvingXML = ophalenInschrijvingResponse.InschrijvingXML
 	bevoegdheidResponse.Inschrijving = ma
 
-	return bevoegdheidResponse, nil
+	return bevoegdheidResponse, nil, rawResponse
 }
