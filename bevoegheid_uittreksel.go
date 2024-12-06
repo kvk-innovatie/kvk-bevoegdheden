@@ -461,8 +461,85 @@ func formatPeilMoment(pm string) string {
 	return pm[:4] + "-" + pm[4:6] + "-" + pm[6:8] + " " + pm[8:10] + ":" + pm[10:12] + ":" + pm[12:14] + "." + pm[14:]
 }
 
-// GetBevoegdheidUittreksel TODO
 func getBevoegdheidUittreksel(bevoegdheidUittreksel *models.BevoegdheidUittreksel, paths *models.Paths, ophalenInschrijvingResponse *models.OphalenInschrijvingResponse, identityNP models.IdentityNP) {
+	bevoegdheidUittreksel.Peilmoment = formatPeilMoment(ophalenInschrijvingResponse.Peilmoment)
+
+	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
+	bevoegdheidUittreksel.KvkNummer = ma.KvkNummer
+	bevoegdheidUittreksel.Naam = ma.Naam
+	bevoegdheidUittreksel.Adres = ma.BezoekLocatie.VolledigAdres
+	bevoegdheidUittreksel.RegistratieAanvang = convertDate(ma.Registratie.DatumAanvang)
+
+	paths.KvkNummer = "maatschappelijkeActiviteit.kvkNummer"
+	paths.Naam = "maatschappelijkeActiviteit.naam"
+	paths.Adres = "maatschappelijkeActiviteit.bezoekLocatie.volledigAdres"
+	paths.RegistratieAanvang = "maatschappelijkeActiviteit.registratie.datumAanvang"
+
+	if len(ma.Communicatiegegevens.EmailAdres) != 0 {
+		bevoegdheidUittreksel.EmailAdres = ma.Communicatiegegevens.EmailAdres[0]
+	}
+	paths.EmailAdres = "maatschappelijkeActiviteit.communicatiegegevens.emailAdres.0"
+
+	for i, nr := range ma.Communicatiegegevens.Communicatienummer {
+		if nr.Soort.Code == "T" {
+			bevoegdheidUittreksel.Telefoon = nr.Toegangscode + " " + nr.Nummer[1:]
+			paths.Telefoon = "maatschappelijkeActiviteit.communicatiegegevens.communicatienummer." + strconv.Itoa(i)
+			break
+		}
+	}
+
+	for i, sbi := range ma.SbiActiviteit {
+		if sbi.IsHoofdactiviteit.Code == "J" {
+			bevoegdheidUittreksel.SbiActiviteit = sbi.SbiCode.Code + ", " + sbi.SbiCode.Omschrijving
+			paths.SbiActiviteit = "maatschappelijkeActiviteit.sbiActiviteit." + strconv.Itoa(i) + ".sbiCode"
+			break
+		}
+	}
+
+	if bevoegdheidUittreksel.SbiActiviteit == "" {
+		for i, sbi := range ma.ManifesteertZichAls.Onderneming.SbiActiviteit {
+			if sbi.IsHoofdactiviteit.Code == "J" {
+				bevoegdheidUittreksel.SbiActiviteit = sbi.SbiCode.Code + ", " + sbi.SbiCode.Omschrijving
+				paths.SbiActiviteit = "maatschappelijkeActiviteit.manifesteertZichAls.onderneming.sbiActiviteit." + strconv.Itoa(i) + ".sbiCode"
+				break
+			}
+		}
+	}
+
+	for i, handeltOnder := range ma.ManifesteertZichAls.Onderneming.HandeltOnder {
+		prefix := ", "
+		if i == 0 {
+			prefix = ""
+		}
+		bevoegdheidUittreksel.Handelsnamen = bevoegdheidUittreksel.Handelsnamen + prefix + handeltOnder.Handelsnaam.Naam
+	}
+	paths.Handelsnamen = "maatschappelijkeActiviteit.manifesteertZichAls.onderneming.handeltOnder"
+
+	if ma.HeeftAlsEigenaar.Eenmanszaak != nil {
+		eigenaarIsNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.Eenmanszaak, "NatuurlijkPersoon", "maatschappelijkeActiviteit.heeftAlsEigenaar.natuurlijkPersoon")
+	} else if ma.HeeftAlsEigenaar.NaamPersoon != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.NaamPersoon, "NaamPersoon", "maatschappelijkeActiviteit.heeftAlsEigenaar.naamPersoon")
+	} else if ma.HeeftAlsEigenaar.BuitenlandseVennootschap != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.BuitenlandseVennootschap, "BuitenlandseVennootschap", "maatschappelijkeActiviteit.heeftAlsEigenaar.buitenlandseVennootschap")
+	} else if ma.HeeftAlsEigenaar.EenmanszaakMetMeerdereEigenaren != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.EenmanszaakMetMeerdereEigenaren, "EenmanszaakMetMeerdereEigenaren", "maatschappelijkeActiviteit.heeftAlsEigenaar.eenmanszaakMetMeerdereEigenaren")
+	} else if ma.HeeftAlsEigenaar.Rechtspersoon != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.Rechtspersoon, "Rechtspersoon", "maatschappelijkeActiviteit.heeftAlsEigenaar.rechtspersoon")
+	} else if ma.HeeftAlsEigenaar.RechtspersoonInOprichting != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.RechtspersoonInOprichting, "RechtspersoonInOprichting", "maatschappelijkeActiviteit.heeftAlsEigenaar.rechtspersoonInOprichting")
+	} else if ma.HeeftAlsEigenaar.Samenwerkingsverband != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.Samenwerkingsverband, "Samenwerkingsverband", "maatschappelijkeActiviteit.heeftAlsEigenaar.samenwerkingsverband")
+	} else if ma.HeeftAlsEigenaar.AfgeslotenMoeder != nil {
+		eigenaarIsNietNatuurlijkPersoon(bevoegdheidUittreksel, paths, identityNP, ma.HeeftAlsEigenaar.AfgeslotenMoeder, "AfgeslotenMoeder", "maatschappelijkeActiviteit.heeftAlsEigenaar.afgeslotenMoeder")
+	}
+}
+func getLPID(bevoegdheidUittreksel *models.BevoegdheidUittreksel, ophalenInschrijvingResponse *models.OphalenInschrijvingResponse) {
+	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
+	bevoegdheidUittreksel.KvkNummer = ma.KvkNummer
+	bevoegdheidUittreksel.Naam = ma.Naam
+}
+
+func getCompanyCertificate(bevoegdheidUittreksel *models.BevoegdheidUittreksel, paths *models.Paths, ophalenInschrijvingResponse *models.OphalenInschrijvingResponse, identityNP models.IdentityNP) {
 	bevoegdheidUittreksel.Peilmoment = formatPeilMoment(ophalenInschrijvingResponse.Peilmoment)
 
 	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit

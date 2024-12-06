@@ -43,7 +43,7 @@ func GetBevoegdheid(kvkNummer string, identityNP models.IdentityNP, clientID, cl
 		return nil, err, ""
 	}
 
-	ophalenInschrijvingResponse, err, rawResponse := GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL, useCache, env)
+	ophalenInschrijvingResponse, err, rawResponse := GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL, true, env)
 	if err != nil {
 		return nil, err, rawResponse
 	}
@@ -56,6 +56,48 @@ func GetBevoegdheid(kvkNummer string, identityNP models.IdentityNP, clientID, cl
 	}
 
 	getBevoegdheidUittreksel(bevoegdheidUittreksel, paths, ophalenInschrijvingResponse, identityNP)
+
+	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
+	bevoegdheidResponse.Inschrijving = ma
+
+	return bevoegdheidResponse, nil, rawResponse
+}
+
+func GetLPID(kvkNummer string, identityNP models.IdentityNP, clientID, clientSecret, authServerURL string, useCache bool, env string) (*models.BevoegdheidResponse, error, string) {
+	ophalenInschrijvingResponse, err, rawResponse := GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL, true, env)
+	if err != nil {
+		return nil, err, rawResponse
+	}
+
+	bevoegdheidUittreksel := &models.BevoegdheidUittreksel{}
+	paths := &models.Paths{}
+	bevoegdheidResponse := &models.BevoegdheidResponse{
+		BevoegdheidUittreksel: bevoegdheidUittreksel,
+		Paths:                 paths,
+	}
+
+	getLPID(bevoegdheidUittreksel, ophalenInschrijvingResponse)
+
+	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
+	bevoegdheidResponse.Inschrijving = ma
+
+	return bevoegdheidResponse, nil, rawResponse
+}
+
+func GetCompanyCertificate(kvkNummer string, identityNP models.IdentityNP, clientID, clientSecret, authServerURL string, useCache bool, env string) (*models.BevoegdheidResponse, error, string) {
+	ophalenInschrijvingResponse, err, rawResponse := GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL, true, env)
+	if err != nil {
+		return nil, err, rawResponse
+	}
+
+	bevoegdheidUittreksel := &models.BevoegdheidUittreksel{}
+	paths := &models.Paths{}
+	bevoegdheidResponse := &models.BevoegdheidResponse{
+		BevoegdheidUittreksel: bevoegdheidUittreksel,
+		Paths:                 paths,
+	}
+
+	getCompanyCertificate(bevoegdheidUittreksel, paths, ophalenInschrijvingResponse, identityNP)
 
 	ma := ophalenInschrijvingResponse.Product.MaatschappelijkeActiviteit
 	bevoegdheidResponse.Inschrijving = ma

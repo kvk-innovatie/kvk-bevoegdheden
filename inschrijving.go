@@ -106,13 +106,16 @@ func GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL string, us
 			return &hrResponse.Envelope.Body.OphalenInschrijvingResponse, nil, string(respBody)
 		}
 	}
+	authServerURL = strings.TrimRight(authServerURL, "/")
 
 	conf := &clientcredentials.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		TokenURL:     authServerURL + "/token",
 	}
+	fmt.Printf("ClientID URL: %#v\n", conf.ClientID)
 
+	fmt.Printf("Token URL: %#v\n", conf.TokenURL)
 	tok, err := conf.Token(context.Background())
 	if err != nil {
 		fmt.Println(err)
