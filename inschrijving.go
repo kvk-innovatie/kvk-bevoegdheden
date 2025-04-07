@@ -118,26 +118,33 @@ func GetInschrijving(kvkNummer, clientID, clientSecret, authServerURL string, us
 	fmt.Printf("Token URL: %#v\n", conf.TokenURL)
 	tok, err := conf.Token(context.Background())
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error retrieving token:", err)
 	}
 	if !tok.Valid() {
-		fmt.Printf("token invalid. got: %#v", tok)
+		fmt.Printf("Token invalid. Got: %#v\n", tok)
 	}
 
-	url := fmt.Sprintf("https://api.signicat.com/info/lookup/countries/nl/organizations/%s?source=kvk-dataservice&rawJSON=true", kvkNummer)
+	fmt.Println("Token retrieved successfully")
+
+	url := fmt.Sprintf(`https://api.signicat.com/info/lookup/countries/nl/organizations/%s?source=kvk-dataservice&rawJSON=true`, kvkNummer)
+	fmt.Println("Generated URL:", url)
 
 	const clientConnectTimeout = time.Second * 10
 	client := &http.Client{
 		Transport: SafeTransport(clientConnectTimeout),
 	}
+	fmt.Println("HTTP client initialized with safe transport")
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
+		fmt.Println("Failed to create HTTP request:", err)
 		panic(err)
 	}
+	fmt.Println("HTTP request created successfully")
 
 	req.Header.Set("Authorization", "Bearer "+tok.AccessToken)
 	resp, err := client.Do(req)
+	fmt.Printf("Response received - Status: %s, StatusCode: %d\n", resp.Status, resp.StatusCode)
 	if resp.StatusCode == 404 {
 		return nil, ErrInschrijvingNotFound, ""
 	} else if err != nil {
